@@ -4,13 +4,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <sys/wait.h>
 #include <string.h>
+#include <sys/wait.h>
 
 #define FILESIZE 100
 
 int main() {
-    const char *memname = "shared_memory";
+    const char *memname = "shared_memory.txt";
     const char *message = "Hello, shared memory!";
     int fd;
     char *map;
@@ -18,7 +18,7 @@ int main() {
     // Create and open a shared memory area
     fd = shm_open(memname, O_CREAT | O_RDWR, 0666);
     if (fd == -1) {
-        perror("shm_open");
+        perror("Error opening file for writing");
         exit(1);
     }
 

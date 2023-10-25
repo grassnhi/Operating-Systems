@@ -1,56 +1,103 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
+#include <string.h>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 
-static int pipefd1[2], pipefd2[2]; // pipefd1: Parent->Child, pipefd2: Child->Parent
-// [0]: read end, [1]: write end
-char writemessage = 'a';
-char readmessage;
+#define MAX_MSG_SIZE 1024
 
-void INIT(void){
-	if(pipe(pipefd1) < 0 || pipe(pipefd2) < 0){
-		perror("pipe");
-		exit(EXIT_FAILURE);
-	}
+struct message {
+    long message_type;
+    char text[MAX_MSG_SIZE];
+};
+
+int message_queue_id_1, message_queue_id_2;
+pthread_mutex_t lock;
+int can_send = 1;
+int exit_program = 0;
+
+void *sender(void *arg) {
+    struct message msg;
+    msg.message_type = 1;
+
+    while (1) {
+        pthread_mutex_lock(&lock);
+        if (can_send) {
+            printf("Enter a message to send to thread 2 (type 'exit' to quit): ");
+            fgets(msg.text, MAX_MSG_SIZE, stdin);
+            if (strcmp(msg.text, "exit\n") == 0) {
+                exit_program = 1;
+                pthread_mutex_unlock(&lock);
+                break;
+            }
+            msgsnd(message_queue_id_2, &msg, sizeof(msg.text), 0);
+            can_send = 0;
+        }
+        pthread_mutex_unlock(&lock);
+        if (exit_program) {
+            break;
+        }
+    }
+
+    return NULL;
 }
-void WRITE_TO_PARENT(void){
-	writemessage++;
-	write(pipefd2[1], &writemessage, sizeof(writemessage));
-	printf("Child send message to parent: %c\n", writemessage);
+
+
+void *receiver(void *arg) {
+    struct message msg;
+
+    while (!exit_program) {
+        msgrcv(message_queue_id_1, &msg, sizeof(msg.text), 1, 0);
+        printf("Received message from thread 1: %s", msg.text);
+        pthread_mutex_lock(&lock);
+        can_send = 1;
+        pthread_mutex_unlock(&lock);
+        if (strcmp(msg.text, "exit\n") == 0) {
+            exit_program = 1;
+            break;
+        }
+    }
+
+    return NULL;
 }
-void READ_FROM_PARENT(void){
-	read(pipefd1[0], &readmessage, sizeof(readmessage));
-	printf("Child receive message from parent: %c\n", readmessage);
-}
-void WRITE_TO_CHILD(void){
-	writemessage++;
-	write(pipefd1[1], &writemessage, sizeof(writemessage));
-	printf("Parent send message to child: %c\n", writemessage);
-}
-void READ_FROM_CHILD(void){
-	read(pipefd2[0], &readmessage, sizeof(readmessage));
-	printf("Parent receive message from child: %c\n", readmessage);
-}
-int main(int argc, char *argv[]){
-	INIT();
-	pid_t pid;
-	pid = fork();
-	//set a timer, process will end after 1 second
-	alarm(10);
-	if(pid == 0){
-		while(1){
-			sleep(rand()%2+1);
-			WRITE_TO_CHILD();
-			READ_FROM_CHILD();
-		}
-	}
-	else{
-		while(1){
-			sleep(rand()%2+1);
-			READ_FROM_PARENT();
-			WRITE_TO_PARENT();
-		}
-	}
-	return 0;
+
+int main() {
+    pthread_t tid1, tid2;
+
+    // Creating two message queues
+    key_t key1 = ftok("keyfile1", 65);
+    key_t key2 = ftok("keyfile2", 66);
+
+    message_queue_id_1 = msgget(key1, 0666 | IPC_CREAT);
+    message_queue_id_2 = msgget(key2, 0666 | IPC_CREAT);
+
+    if (message_queue_id_1 == -1 || message_queue_id_2 == -1) {
+        perror("msgget");
+        exit(1);
+    }
+
+    pthread_mutex_init(&lock, NULL);
+
+    if (pthread_create(&tid1, NULL, sender, NULL) != 0) {
+        perror("pthread_create");
+        exit(1);
+    }
+
+    if (pthread_create(&tid2, NULL, receiver, NULL) != 0) {
+        perror("pthread_create");
+        exit(1);
+    }
+
+    pthread_join(tid1, NULL);
+    pthread_join(tid2, NULL);
+
+    // Remove the message queues
+    msgctl(message_queue_id_1, IPC_RMID, NULL);
+    msgctl(message_queue_id_2, IPC_RMID, NULL);
+
+    pthread_mutex_destroy(&lock);
+
+    return 0;
 }

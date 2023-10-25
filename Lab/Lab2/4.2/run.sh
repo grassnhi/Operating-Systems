@@ -1,3 +1,4 @@
+#!/usr/bin/bash
 make clean
 make all
 ./sum_serial 1000000
