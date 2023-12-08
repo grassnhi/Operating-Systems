@@ -1,0 +1,2 @@
+make sched
+./sched
