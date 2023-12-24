@@ -124,16 +124,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 
     *alloc_addr = rgnode.rg_start;
 
-#ifdef VMDBG
-    printf("Free regions after alloc:\n");
-    print_list_rg(caller->mm->mmap->vm_freerg_list);
-#endif
-
-#ifdef MMDBG
-    printf("Using frames after alloc:");
-    print_list_fp(caller->mram->fifo_fp_list);
-#endif
-
     return 0;
   }
 
@@ -147,16 +137,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
 		caller->mm->symrgtbl[rgid].rg_end = cur_vma->sbrk + size;
 
 		cur_vma->sbrk += size;
-
-#ifdef VMDBG
-    printf("Free regions after alloc:\n");
-    print_list_rg(caller->mm->mmap->vm_freerg_list);
-#endif
-
-#ifdef MMDBG
-    printf("Using frames after alloc:");
-    print_list_fp(caller->mram->fifo_fp_list);
-#endif
 
 		return 0;
 	}
@@ -182,16 +162,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
     cur_vma->sbrk += size;
 
     *alloc_addr = old_sbrk;
-
-#ifdef VMDBG
-    printf("Free regions after alloc:\n");
-    print_list_rg(caller->mm->mmap->vm_freerg_list);
-#endif
-
-#ifdef MMDBG
-    printf("Using frames after alloc:");
-    print_list_fp(caller->mram->fifo_fp_list);
-#endif
 
     return 0;
   }

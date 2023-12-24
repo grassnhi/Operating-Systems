@@ -9,6 +9,9 @@
 struct queue_t {
 	struct pcb_t * proc[MAX_QUEUE_SIZE];
 	int size;
+	
+	pthread_mutex_t queue_lock;
+
 #ifdef MLQ_SCHED
 	int slot;
 #endif

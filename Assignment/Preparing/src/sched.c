@@ -26,7 +26,7 @@ int queue_empty(void) {
 void init_scheduler(void) {
 #ifdef MLQ_SCHED
     int i ;
-
+	pthread_mutex_init(&mlq_ready_queue->queue_lock, NULL);
 	for (i = 0; i < MAX_PRIO; i ++){
 		mlq_ready_queue[i].size = 0;
 		mlq_ready_queue[i].slot = MAX_PRIO - i;

@@ -112,7 +112,7 @@ static void * ld_routine(void * args) {
 	while (i < num_processes) {
 		struct pcb_t * proc = load(ld_processes.path[i]);
 #ifdef MLQ_SCHED
-		proc->priority = ld_processes.prio[i];
+		proc->prio = ld_processes.prio[i];
 #endif
 		while (current_time() < ld_processes.start_time[i]) {
 			next_slot(timer_id);
@@ -130,7 +130,7 @@ static void * ld_routine(void * args) {
 			   ld_processes.path[i], proc->pid, ld_processes.prio[i]);
 #else
         printf("\tLoaded a process at %s, PID: %d PRIO: %u\n",
-               ld_processes.path[i], proc->pid, proc->priority);
+               ld_processes.path[i], proc->pid, proc->prio);
 #endif
 
 		add_proc(proc);
